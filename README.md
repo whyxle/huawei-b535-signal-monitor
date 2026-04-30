@@ -7,7 +7,6 @@ A desktop signal monitor for the **Huawei 4G Router B535-232a**. The app uses Py
 - Real-time RSRP and SINR monitoring.
 - Modern PyQt desktop interface with metric cards, trend chart, and event log.
 - Local configuration through `settings.ini`.
-- Passwords are not stored in source code.
 - Safe example config in `settings.example.ini`.
 
 ## Compatibility
