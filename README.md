@@ -1,5 +1,10 @@
 # Huawei B535 Signal Monitor
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/ed44a04d-24e2-4431-ad2b-6a7d984f7cce" width="450"/>
+</p>
+
+
 A desktop signal monitor for the **Huawei 4G Router B535-232a**. The app uses PyQt5 for the UI and Playwright to read RSRP and SINR values from the router WebUI in real time.
 
 ## Features
