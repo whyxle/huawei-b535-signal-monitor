@@ -289,8 +289,8 @@ class SignalMonitorApp(QMainWindow):
         self.min_sinr = None
 
         self.setWindowTitle("RSRP Checker")
-        self.setMinimumSize(1120, 760)
-        self.resize(1180, 820)
+        self.setMinimumSize(1380, 1000)
+        self.resize(1380, 1000)
 
         self.build_ui()
         self.setup_chart()
@@ -345,7 +345,7 @@ class SignalMonitorApp(QMainWindow):
         title = QLabel("Signal Quality Monitor")
         title.setObjectName("appTitle")
 
-        subtitle = QLabel("Track RSRP and SINR in real time without storing passwords in source code.")
+        subtitle = QLabel("Track RSRP and SINR in real time.")
         subtitle.setObjectName("subtitle")
 
         title_block.addWidget(eyebrow)
