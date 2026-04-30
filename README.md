@@ -7,6 +7,8 @@
 
 A desktop signal monitor for the **Huawei 4G Router B535-232a**. The app uses PyQt5 for the UI and Playwright to read RSRP and SINR values from the router WebUI in real time.
 
+It is especially useful when adjusting external router antennas: start monitoring, slowly change the antenna direction or placement, and watch how RSRP and SINR react in real time.
+
 ## Features
 
 - Real-time RSRP and SINR monitoring.
@@ -31,22 +33,73 @@ Other Huawei, SoyeaLink, or carrier-customized routers may use different admin p
 
 ## Installation
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-playwright install chromium
-```
+Download the latest Windows build from the project's **GitHub Releases** page:
+
+1. Open **Releases** in the GitHub repository.
+2. Download `RSRP_checker-windows.zip` from the latest release.
+3. Extract the archive to any folder.
+4. Run `RSRP_checker.exe`.
+
+The release archive includes the app and the Playwright browser files it needs, so a normal installation does not require Python, `pip`, or a separate Chromium install.
 
 ## Configuration
 
-Copy the example file:
+Create a local configuration file next to `RSRP_checker.exe`:
 
 ```powershell
 Copy-Item settings.example.ini settings.ini
 ```
 
 Then edit `settings.ini`:
+
+```ini
+[connection]
+login_url = http://192.168.8.1/html/index.html
+info_url = http://192.168.8.1/html/content.html#deviceinformation
+password = your_router_password_here
+
+[runtime]
+refresh_seconds = 2
+headless = true
+```
+
+For better privacy, you can leave the password out of `settings.ini` and set it as an environment variable before launching the app:
+
+```powershell
+$env:RSRP_MODEM_PASSWORD = "your_router_password_here"
+```
+
+## Usage
+
+Run `RSRP_checker.exe`, then press **Start** to begin monitoring and **Stop** to end the session.
+
+While aiming an external antenna, keep the app open and adjust the antenna gradually. Better signal usually means a stronger RSRP value and a higher SINR value; wait a few refresh cycles after each movement before comparing readings.
+
+## Development
+
+To run the app from source:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+playwright install chromium
+python main.py
+```
+
+To build the Windows release folder:
+
+```powershell
+.\.venv\Scripts\python.exe -m PyInstaller .\RSRP_checker.spec
+Copy-Item settings.example.ini .\dist\RSRP_checker\settings.example.ini -Force
+Compress-Archive -Path .\dist\RSRP_checker\* -DestinationPath .\dist\RSRP_checker-windows.zip -Force
+```
+
+The build output is created under `dist/`. Upload `dist/RSRP_checker-windows.zip` to GitHub Releases instead of committing it to the repository.
+
+## Source Configuration
+
+When running from source, `settings.ini` is read from the repository folder:
 
 ```ini
 [connection]
@@ -66,14 +119,6 @@ $env:RSRP_MODEM_PASSWORD = "your_router_password_here"
 ```
 
 `settings.ini` is listed in `.gitignore` and should not be committed.
-
-## Usage
-
-```powershell
-python main.py
-```
-
-Press **Start** to begin monitoring and **Stop** to end the session.
 
 ## Notes
 

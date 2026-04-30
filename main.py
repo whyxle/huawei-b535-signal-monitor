@@ -28,7 +28,10 @@ from PyQt5.QtWidgets import (
 from playwright.sync_api import sync_playwright
 
 
-APP_DIR = Path(__file__).resolve().parent
+if getattr(sys, "frozen", False):
+    APP_DIR = Path(sys.executable).resolve().parent
+else:
+    APP_DIR = Path(__file__).resolve().parent
 SETTINGS_FILE = APP_DIR / "settings.ini"
 
 DEFAULT_LOGIN_URL = "http://192.168.8.1/html/index.html"

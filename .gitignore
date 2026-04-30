@@ -11,3 +11,7 @@ settings.ini
 test-results/
 playwright-report/
 *.log
+
+# PyInstaller build artifacts
+build/
+dist/
