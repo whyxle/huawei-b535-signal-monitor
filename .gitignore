@@ -1,0 +1,13 @@
+.venv/
+.idea/
+__pycache__/
+*.py[cod]
+
+# Local runtime configuration. May contain modem URL/password.
+settings.ini
+.env
+
+# Playwright/browser artifacts
+test-results/
+playwright-report/
+*.log
