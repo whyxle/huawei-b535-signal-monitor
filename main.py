@@ -81,39 +81,39 @@ def extract_number(value):
 def get_rsrp_quality(value):
     rsrp = extract_number(value)
     if rsrp is None:
-        return "Нет данных", "neutral"
+        return "No data", "neutral"
     if rsrp >= -70:
-        return "Идеально", "excellent"
+        return "Excellent", "excellent"
     if rsrp >= -76:
-        return "Отлично", "good"
+        return "Very good", "good"
     if rsrp >= -85:
-        return "Хорошо", "good"
+        return "Good", "good"
     if rsrp >= -95:
-        return "Средне", "warning"
+        return "Fair", "warning"
     if rsrp >= -105:
-        return "Слабо", "danger"
+        return "Weak", "danger"
     if rsrp >= -110:
-        return "Погранично", "danger"
-    return "Нет сигнала", "critical"
+        return "Marginal", "danger"
+    return "No signal", "critical"
 
 
 def get_sinr_quality(value):
     sinr = extract_number(value)
     if sinr is None:
-        return "Нет данных", "neutral"
+        return "No data", "neutral"
     if sinr >= 25:
-        return "Идеально", "excellent"
+        return "Excellent", "excellent"
     if sinr >= 20:
-        return "Отлично", "good"
+        return "Very good", "good"
     if sinr >= 10:
-        return "Хорошо", "good"
+        return "Good", "good"
     if sinr >= 5:
-        return "Средне", "warning"
+        return "Fair", "warning"
     if sinr >= 0:
-        return "Шумно", "danger"
+        return "Noisy", "danger"
     if sinr >= -10:
-        return "Сильные помехи", "danger"
-    return "Нет полезного сигнала", "critical"
+        return "Heavy interference", "danger"
+    return "No usable signal", "critical"
 
 
 class MonitorSignals(QObject):
@@ -136,31 +136,31 @@ class MonitorWorker:
     def run(self):
         try:
             if not self.password:
-                self.signals.log.emit("Пароль не задан. Укажите его в поле, settings.ini или RSRP_MODEM_PASSWORD.")
+                self.signals.log.emit("Password is missing. Enter it in the app, settings.ini, or RSRP_MODEM_PASSWORD.")
                 return
 
-            self.signals.state.emit("Подключение")
+            self.signals.state.emit("Connecting")
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch(headless=self.headless)
                 context = browser.new_context()
                 page = context.new_page()
 
                 try:
-                    self.signals.log.emit(f"Открываю страницу входа: {self.login_url}")
+                    self.signals.log.emit(f"Opening login page: {self.login_url}")
                     page.goto(self.login_url, wait_until="domcontentloaded", timeout=30000)
 
-                    self.signals.log.emit("Ввожу пароль и выполняю вход")
+                    self.signals.log.emit("Entering password and signing in")
                     page.wait_for_selector("#login_password", timeout=10000)
                     page.fill("#login_password", self.password)
                     page.press("#login_password", "Enter")
                     page.wait_for_load_state("networkidle", timeout=30000)
 
-                    self.signals.log.emit(f"Перехожу к информации о сигнале: {self.info_url}")
+                    self.signals.log.emit(f"Opening signal information page: {self.info_url}")
                     page.goto(self.info_url, wait_until="domcontentloaded", timeout=30000)
                     page.wait_for_timeout(2000)
 
-                    self.signals.state.emit("Мониторинг")
-                    self.signals.log.emit("Мониторинг запущен")
+                    self.signals.state.emit("Monitoring")
+                    self.signals.log.emit("Monitoring started")
 
                     while not self.stop_event.is_set():
                         page.reload(wait_until="domcontentloaded", timeout=30000)
@@ -173,8 +173,8 @@ class MonitorWorker:
                         self.signals.data.emit(
                             {
                                 "timestamp": QDateTime.currentDateTime(),
-                                "rsrp": rsrp or "—",
-                                "sinr": sinr or "—",
+                                "rsrp": rsrp or "-",
+                                "sinr": sinr or "-",
                                 "rsrp_value": extract_number(rsrp),
                                 "sinr_value": extract_number(sinr),
                                 "rsrp_quality": rsrp_quality,
@@ -183,16 +183,16 @@ class MonitorWorker:
                                 "sinr_level": sinr_level,
                             }
                         )
-                        self.signals.log.emit(f"RSRP: {rsrp or '—'} ({rsrp_quality}), SINR: {sinr or '—'} ({sinr_quality})")
+                        self.signals.log.emit(f"RSRP: {rsrp or '-'} ({rsrp_quality}), SINR: {sinr or '-'} ({sinr_quality})")
                         self.stop_event.wait(self.interval)
                 finally:
                     context.close()
                     browser.close()
 
         except Exception as error:
-            self.signals.log.emit(f"Ошибка мониторинга: {error}")
+            self.signals.log.emit(f"Monitoring error: {error}")
         finally:
-            self.signals.state.emit("Остановлено")
+            self.signals.state.emit("Stopped")
             self.signals.finished.emit()
 
     def read_signal(self, page):
@@ -240,10 +240,10 @@ class MetricCard(QFrame):
         title_label = QLabel(title)
         title_label.setObjectName("metricTitle")
 
-        self.value_label = QLabel("—")
+        self.value_label = QLabel("-")
         self.value_label.setObjectName("metricValue")
 
-        self.quality_label = QLabel("Ожидание данных")
+        self.quality_label = QLabel("Waiting for data")
         self.quality_label.setObjectName("metricQuality")
 
         self.unit_label = QLabel(unit)
@@ -296,7 +296,7 @@ class SignalMonitorApp(QMainWindow):
         self.setup_chart()
         self.apply_theme()
         self.bind_signals()
-        self.add_log("Приложение готово. Укажите параметры и нажмите «Старт».")
+        self.add_log("Application is ready. Configure the connection and press Start.")
 
     def build_ui(self):
         root = QWidget()
@@ -342,17 +342,17 @@ class SignalMonitorApp(QMainWindow):
         eyebrow = QLabel("LTE / 5G signal monitor")
         eyebrow.setObjectName("eyebrow")
 
-        title = QLabel("Мониторинг качества сигнала")
+        title = QLabel("Signal Quality Monitor")
         title.setObjectName("appTitle")
 
-        subtitle = QLabel("Следим за RSRP и SINR в реальном времени, без хранения пароля в коде.")
+        subtitle = QLabel("Track RSRP and SINR in real time without storing passwords in source code.")
         subtitle.setObjectName("subtitle")
 
         title_block.addWidget(eyebrow)
         title_block.addWidget(title)
         title_block.addWidget(subtitle)
 
-        self.status_pill = QLabel("Остановлено")
+        self.status_pill = QLabel("Stopped")
         self.status_pill.setObjectName("statusPill")
 
         layout.addLayout(title_block, 1)
@@ -360,7 +360,7 @@ class SignalMonitorApp(QMainWindow):
         return header
 
     def create_connection_card(self):
-        card = self.create_card("Подключение")
+        card = self.create_card("Connection")
         layout = card.layout()
 
         self.login_url_input = self.create_input(self.settings["login_url"])
@@ -373,7 +373,7 @@ class SignalMonitorApp(QMainWindow):
         password_row.addWidget(self.password_input, 1)
 
         self.toggle_password_button = QToolButton()
-        self.toggle_password_button.setText("Показать")
+        self.toggle_password_button.setText("Show")
         self.toggle_password_button.setCheckable(True)
         self.toggle_password_button.clicked.connect(self.toggle_password_visibility)
         password_row.addWidget(self.toggle_password_button)
@@ -381,20 +381,20 @@ class SignalMonitorApp(QMainWindow):
         self.interval_input = self.create_input(str(self.settings["interval"]))
         self.interval_input.setValidator(QIntValidator(1, 3600, self))
 
-        self.headless_checkbox = QCheckBox("Запускать браузер в фоне")
+        self.headless_checkbox = QCheckBox("Run browser in the background")
         self.headless_checkbox.setChecked(self.settings["headless"])
 
-        self.save_password_checkbox = QCheckBox("Сохранить пароль в локальном settings.ini")
-        self.save_password_checkbox.setToolTip("Файл settings.ini добавлен в .gitignore и не попадет в коммит.")
+        self.save_password_checkbox = QCheckBox("Save password in local settings.ini")
+        self.save_password_checkbox.setToolTip("settings.ini is ignored by Git and will not be committed.")
 
-        layout.addWidget(self.create_field("Страница входа", self.login_url_input))
-        layout.addWidget(self.create_field("Страница данных", self.info_url_input))
-        layout.addWidget(self.create_field("Пароль модема", password_row))
-        layout.addWidget(self.create_field("Интервал обновления, сек", self.interval_input))
+        layout.addWidget(self.create_field("Login page", self.login_url_input))
+        layout.addWidget(self.create_field("Signal data page", self.info_url_input))
+        layout.addWidget(self.create_field("Router password", password_row))
+        layout.addWidget(self.create_field("Refresh interval, sec", self.interval_input))
         layout.addWidget(self.headless_checkbox)
         layout.addWidget(self.save_password_checkbox)
 
-        hint = QLabel("Совет: пароль можно держать в переменной окружения RSRP_MODEM_PASSWORD.")
+        hint = QLabel("Tip: keep the password in the RSRP_MODEM_PASSWORD environment variable for better privacy.")
         hint.setObjectName("hint")
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -402,16 +402,16 @@ class SignalMonitorApp(QMainWindow):
         controls = QHBoxLayout()
         controls.setSpacing(10)
 
-        self.start_button = QPushButton("Старт")
+        self.start_button = QPushButton("Start")
         self.start_button.setObjectName("primaryButton")
         self.start_button.clicked.connect(self.start_monitoring)
 
-        self.stop_button = QPushButton("Стоп")
+        self.stop_button = QPushButton("Stop")
         self.stop_button.setObjectName("secondaryButton")
         self.stop_button.setEnabled(False)
         self.stop_button.clicked.connect(self.stop_monitoring)
 
-        self.save_button = QPushButton("Сохранить")
+        self.save_button = QPushButton("Save")
         self.save_button.setObjectName("ghostButton")
         self.save_button.clicked.connect(self.save_current_settings)
 
@@ -423,12 +423,12 @@ class SignalMonitorApp(QMainWindow):
         return card
 
     def create_stats_card(self):
-        card = self.create_card("Сессия")
+        card = self.create_card("Session")
         layout = card.layout()
 
-        self.max_rsrp_label = QLabel("—")
+        self.max_rsrp_label = QLabel("-")
         self.max_rsrp_label.setObjectName("statValue")
-        self.min_sinr_label = QLabel("—")
+        self.min_sinr_label = QLabel("-")
         self.min_sinr_label.setObjectName("statValue")
         self.samples_label = QLabel("0")
         self.samples_label.setObjectName("statValue")
@@ -436,9 +436,9 @@ class SignalMonitorApp(QMainWindow):
         grid = QGridLayout()
         grid.setHorizontalSpacing(18)
         grid.setVerticalSpacing(14)
-        grid.addWidget(self.create_stat("Лучший RSRP", self.max_rsrp_label), 0, 0)
-        grid.addWidget(self.create_stat("Минимальный SINR", self.min_sinr_label), 0, 1)
-        grid.addWidget(self.create_stat("Измерений", self.samples_label), 1, 0, 1, 2)
+        grid.addWidget(self.create_stat("Best RSRP", self.max_rsrp_label), 0, 0)
+        grid.addWidget(self.create_stat("Minimum SINR", self.min_sinr_label), 0, 1)
+        grid.addWidget(self.create_stat("Samples", self.samples_label), 1, 0, 1, 2)
 
         layout.addLayout(grid)
         return card
@@ -457,7 +457,7 @@ class SignalMonitorApp(QMainWindow):
         return row
 
     def create_chart_card(self):
-        card = self.create_card("Динамика сигнала")
+        card = self.create_card("Signal Trend")
         layout = card.layout()
 
         self.chart = QtChart.QChart()
@@ -475,7 +475,7 @@ class SignalMonitorApp(QMainWindow):
 
         self.axis_x = QtChart.QDateTimeAxis()
         self.axis_x.setFormat("HH:mm:ss")
-        self.axis_x.setTitleText("Время")
+        self.axis_x.setTitleText("Time")
 
         self.axis_y_rsrp = QtChart.QValueAxis()
         self.axis_y_rsrp.setTitleText("RSRP, dBm")
@@ -505,7 +505,7 @@ class SignalMonitorApp(QMainWindow):
         return card
 
     def create_log_card(self):
-        card = self.create_card("Журнал")
+        card = self.create_card("Log")
         layout = card.layout()
 
         self.log_view = QTextEdit()
@@ -756,7 +756,7 @@ class SignalMonitorApp(QMainWindow):
     def toggle_password_visibility(self):
         visible = self.toggle_password_button.isChecked()
         self.password_input.setEchoMode(QLineEdit.Normal if visible else QLineEdit.Password)
-        self.toggle_password_button.setText("Скрыть" if visible else "Показать")
+        self.toggle_password_button.setText("Hide" if visible else "Show")
 
     def save_current_settings(self):
         login_url, info_url, password, interval, headless = self.collect_settings()
@@ -769,9 +769,9 @@ class SignalMonitorApp(QMainWindow):
             save_password=self.save_password_checkbox.isChecked(),
         )
         if self.save_password_checkbox.isChecked():
-            self.add_log("Настройки сохранены в settings.ini. Файл исключен из Git.")
+            self.add_log("Settings saved to settings.ini. The file is excluded from Git.")
         else:
-            self.add_log("Настройки сохранены без пароля. Для пароля используйте поле ввода или RSRP_MODEM_PASSWORD.")
+            self.add_log("Settings saved without the password. Use the input field or RSRP_MODEM_PASSWORD for the password.")
 
     def collect_settings(self):
         login_url = self.login_url_input.text().strip() or DEFAULT_LOGIN_URL
@@ -793,7 +793,7 @@ class SignalMonitorApp(QMainWindow):
         self.stop_event.clear()
         self.start_button.setEnabled(False)
         self.stop_button.setEnabled(True)
-        self.set_state("Запуск")
+        self.set_state("Starting")
 
         worker = MonitorWorker(login_url, info_url, password, interval, headless, self.signals, self.stop_event)
         self.worker_thread = threading.Thread(target=worker.run, daemon=True)
@@ -802,22 +802,22 @@ class SignalMonitorApp(QMainWindow):
     def stop_monitoring(self):
         if not self.monitoring_active:
             return
-        self.add_log("Останавливаю мониторинг...")
+        self.add_log("Stopping monitoring...")
         self.stop_event.set()
-        self.set_state("Остановка")
+        self.set_state("Stopping")
 
     def reset_session(self):
         self.rsrp_history.clear()
         self.sinr_history.clear()
         self.max_rsrp = None
         self.min_sinr = None
-        self.max_rsrp_label.setText("—")
-        self.min_sinr_label.setText("—")
+        self.max_rsrp_label.setText("-")
+        self.min_sinr_label.setText("-")
         self.samples_label.setText("0")
         self.rsrp_series.clear()
         self.sinr_series.clear()
-        self.rsrp_card.update_metric("—", "Ожидание данных", "neutral")
-        self.sinr_card.update_metric("—", "Ожидание данных", "neutral")
+        self.rsrp_card.update_metric("-", "Waiting for data", "neutral")
+        self.sinr_card.update_metric("-", "Waiting for data", "neutral")
 
     def handle_data(self, data):
         self.rsrp_card.update_metric(data["rsrp"], data["rsrp_quality"], data["rsrp_level"])
@@ -872,7 +872,7 @@ class SignalMonitorApp(QMainWindow):
         self.start_button.setEnabled(True)
         self.stop_button.setEnabled(False)
         self.stop_event.set()
-        self.add_log("Мониторинг остановлен")
+        self.add_log("Monitoring stopped")
 
     def closeEvent(self, event):
         self.stop_event.set()
