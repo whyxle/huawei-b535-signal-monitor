@@ -339,7 +339,7 @@ class SignalMonitorApp(QMainWindow):
         title_block = QVBoxLayout()
         title_block.setSpacing(6)
 
-        eyebrow = QLabel("LTE / 5G signal monitor")
+        eyebrow = QLabel("LTE signal monitor")
         eyebrow.setObjectName("eyebrow")
 
         title = QLabel("Signal Quality Monitor")
