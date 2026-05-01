@@ -1,7 +1,7 @@
 # Huawei B535 Signal Monitor
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/ed44a04d-24e2-4431-ad2b-6a7d984f7cce" width="450"/>
+  <img src="https://github.com/user-attachments/assets/cbf63acc-f139-4420-a88f-de48365dbde9" width="450"/>
 </p>
 
 
