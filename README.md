@@ -36,9 +36,9 @@ Other Huawei, SoyeaLink, or carrier-customized routers may use different admin p
 Download the latest Windows build from the project's **GitHub Releases** page:
 
 1. Open **Releases** in the GitHub repository.
-2. Download `RSRP_checker-windows.zip` from the latest release.
+2. Download `rsrp-signal-monitor.zip` from the latest release.
 3. Extract the archive to any folder.
-4. Run `RSRP_checker.exe`.
+4. Run `RSRP-Signal-Monitor.exe`.
 
 The release archive includes the app and the Playwright browser files it needs, so a normal installation does not require Python, `pip`, or a separate Chromium install.
 
