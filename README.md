@@ -44,7 +44,7 @@ The release archive includes the app and the Playwright browser files it needs, 
 
 ## Configuration
 
-Create a local configuration file next to `RSRP_checker.exe`:
+Create a local configuration file next to `RSRP-Signal-Monitor.exe`:
 
 ```powershell
 Copy-Item settings.example.ini settings.ini
@@ -71,7 +71,7 @@ $env:RSRP_MODEM_PASSWORD = "your_router_password_here"
 
 ## Usage
 
-Run `RSRP_checker.exe`, then press **Start** to begin monitoring and **Stop** to end the session.
+Run `RSRP-Signal-Monitor.exe`, then press **Start** to begin monitoring and **Stop** to end the session.
 
 While aiming an external antenna, keep the app open and adjust the antenna gradually. Better signal usually means a stronger RSRP value and a higher SINR value; wait a few refresh cycles after each movement before comparing readings.
 
@@ -91,11 +91,11 @@ To build the Windows release folder:
 
 ```powershell
 .\.venv\Scripts\python.exe -m PyInstaller .\RSRP_checker.spec
-Copy-Item settings.example.ini .\dist\RSRP_checker\settings.example.ini -Force
-Compress-Archive -Path .\dist\RSRP_checker\* -DestinationPath .\dist\RSRP_checker-windows.zip -Force
+Copy-Item settings.example.ini .\dist\RSRP-Signal-Monitor\settings.example.ini -Force
+Compress-Archive -Path .\dist\RSRP-Signal-Monitor\* -DestinationPath .\dist\rsrp-signal-monitor.zip -Force
 ```
 
-The build output is created under `dist/`. Upload `dist/RSRP_checker-windows.zip` to GitHub Releases instead of committing it to the repository.
+The build output is created under `dist/`. Upload `dist/rsrp-signal-monitor.zip` to GitHub Releases instead of committing it to the repository.
 
 ## Source Configuration
 
