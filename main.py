@@ -38,6 +38,8 @@ DEFAULT_LOGIN_URL = "http://192.168.8.1/html/index.html"
 DEFAULT_INFO_URL = "http://192.168.8.1/html/content.html#deviceinformation"
 DEFAULT_INTERVAL_SECONDS = 2
 MAX_HISTORY_POINTS = 120
+SUPPORTED_THEMES = {"dark", "light"}
+DEFAULT_THEME = "light"
 
 
 def load_settings():
@@ -46,6 +48,9 @@ def load_settings():
 
     connection = config["connection"] if config.has_section("connection") else {}
     runtime = config["runtime"] if config.has_section("runtime") else {}
+    theme = os.getenv("RSRP_THEME", runtime.get("theme", DEFAULT_THEME)).lower()
+    if theme not in SUPPORTED_THEMES:
+        theme = DEFAULT_THEME
 
     return {
         "login_url": os.getenv("RSRP_LOGIN_URL", connection.get("login_url", DEFAULT_LOGIN_URL)),
@@ -53,10 +58,11 @@ def load_settings():
         "password": os.getenv("RSRP_MODEM_PASSWORD", connection.get("password", "")),
         "interval": int(os.getenv("RSRP_REFRESH_SECONDS", runtime.get("refresh_seconds", DEFAULT_INTERVAL_SECONDS))),
         "headless": os.getenv("RSRP_HEADLESS", runtime.get("headless", "true")).lower() not in {"0", "false", "no"},
+        "theme": theme,
     }
 
 
-def save_settings(login_url, info_url, interval, headless, password="", save_password=False):
+def save_settings(login_url, info_url, interval, headless, password="", save_password=False, theme=DEFAULT_THEME):
     config = configparser.ConfigParser()
     config["connection"] = {
         "login_url": login_url,
@@ -68,8 +74,19 @@ def save_settings(login_url, info_url, interval, headless, password="", save_pas
     config["runtime"] = {
         "refresh_seconds": str(interval),
         "headless": "true" if headless else "false",
+        "theme": theme if theme in SUPPORTED_THEMES else DEFAULT_THEME,
     }
 
+    with SETTINGS_FILE.open("w", encoding="utf-8") as file:
+        config.write(file)
+
+
+def save_theme_setting(theme):
+    config = configparser.ConfigParser()
+    config.read(SETTINGS_FILE, encoding="utf-8")
+    if not config.has_section("runtime"):
+        config.add_section("runtime")
+    config.set("runtime", "theme", theme if theme in SUPPORTED_THEMES else DEFAULT_THEME)
     with SETTINGS_FILE.open("w", encoding="utf-8") as file:
         config.write(file)
 
@@ -290,6 +307,7 @@ class SignalMonitorApp(QMainWindow):
         self.sinr_history = []
         self.max_rsrp = None
         self.min_sinr = None
+        self.theme = self.settings["theme"]
 
         self.setWindowTitle("RSRP Checker")
         self.setMinimumSize(1380, 1000)
@@ -355,11 +373,23 @@ class SignalMonitorApp(QMainWindow):
         title_block.addWidget(title)
         title_block.addWidget(subtitle)
 
+        status_block = QVBoxLayout()
+        status_block.setSpacing(10)
+
         self.status_pill = QLabel("Stopped")
         self.status_pill.setObjectName("statusPill")
 
+        self.theme_button = QToolButton()
+        self.theme_button.setObjectName("themeButton")
+        self.theme_button.setCheckable(True)
+        self.theme_button.clicked.connect(self.toggle_theme)
+        self.update_theme_button_text()
+
+        status_block.addWidget(self.status_pill, 0, Qt.AlignRight)
+        status_block.addWidget(self.theme_button, 0, Qt.AlignRight)
+
         layout.addLayout(title_block, 1)
-        layout.addWidget(self.status_pill, 0, Qt.AlignTop)
+        layout.addLayout(status_block, 0)
         return header
 
     def create_connection_card(self):
@@ -583,17 +613,184 @@ class SignalMonitorApp(QMainWindow):
     def apply_theme(self):
         QApplication.setStyle("Fusion")
         palette = QPalette()
-        palette.setColor(QPalette.Window, QColor("#08111f"))
-        palette.setColor(QPalette.WindowText, QColor("#e6edf7"))
-        palette.setColor(QPalette.Base, QColor("#0f1b2d"))
-        palette.setColor(QPalette.Text, QColor("#e6edf7"))
-        palette.setColor(QPalette.Button, QColor("#17243a"))
-        palette.setColor(QPalette.ButtonText, QColor("#e6edf7"))
-        palette.setColor(QPalette.Highlight, QColor("#2e90fa"))
+        if self.theme == "light":
+            palette.setColor(QPalette.Window, QColor("#f6f8fb"))
+            palette.setColor(QPalette.WindowText, QColor("#172033"))
+            palette.setColor(QPalette.Base, QColor("#ffffff"))
+            palette.setColor(QPalette.Text, QColor("#172033"))
+            palette.setColor(QPalette.Button, QColor("#eef4fb"))
+            palette.setColor(QPalette.ButtonText, QColor("#172033"))
+            palette.setColor(QPalette.Highlight, QColor("#1479d4"))
+        else:
+            palette.setColor(QPalette.Window, QColor("#08111f"))
+            palette.setColor(QPalette.WindowText, QColor("#e6edf7"))
+            palette.setColor(QPalette.Base, QColor("#0f1b2d"))
+            palette.setColor(QPalette.Text, QColor("#e6edf7"))
+            palette.setColor(QPalette.Button, QColor("#17243a"))
+            palette.setColor(QPalette.ButtonText, QColor("#e6edf7"))
+            palette.setColor(QPalette.Highlight, QColor("#2e90fa"))
         QApplication.setPalette(palette)
 
-        self.setStyleSheet(
-            """
+        if self.theme == "light":
+            self.setStyleSheet(
+                """
+            QWidget#root {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
+                    stop: 0 #f7fafc, stop: 0.5 #edf4fb, stop: 1 #eaf7f0);
+                color: #172033;
+                font-family: "Segoe UI", "Manrope", sans-serif;
+                font-size: 13px;
+            }
+            QFrame#hero {
+                background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
+                    stop: 0 #ffffff, stop: 0.62 #f1f8ff, stop: 1 #edf8f0);
+                border: 1px solid #d8e2ee;
+                border-radius: 24px;
+            }
+            QLabel#eyebrow {
+                color: #1479d4;
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 1.5px;
+                text-transform: uppercase;
+            }
+            QLabel#appTitle {
+                color: #0f172a;
+                font-size: 30px;
+                font-weight: 800;
+            }
+            QLabel#subtitle, QLabel#hint {
+                color: #52657a;
+            }
+            QLabel#statusPill {
+                background: #e7f1ff;
+                border: 1px solid #bdd7f5;
+                border-radius: 16px;
+                color: #155a9f;
+                padding: 8px 14px;
+                font-weight: 700;
+            }
+            QFrame#card, QFrame#metricCard {
+                background: #ffffff;
+                border: 1px solid #d9e3ef;
+                border-radius: 20px;
+            }
+            QFrame#metricCard[level="excellent"], QFrame#metricCard[level="good"] {
+                border-color: rgba(36, 167, 106, 0.50);
+            }
+            QFrame#metricCard[level="warning"] {
+                border-color: rgba(217, 119, 6, 0.48);
+            }
+            QFrame#metricCard[level="danger"], QFrame#metricCard[level="critical"] {
+                border-color: rgba(220, 38, 38, 0.48);
+            }
+            QLabel#cardTitle {
+                color: #172033;
+                font-size: 17px;
+                font-weight: 800;
+            }
+            QLabel#fieldLabel, QLabel#statTitle, QLabel#metricTitle, QLabel#metricUnit {
+                color: #617187;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            QLabel#metricValue {
+                color: #111827;
+                font-size: 42px;
+                font-weight: 850;
+            }
+            QLabel#metricQuality {
+                color: #52657a;
+                font-size: 15px;
+                font-weight: 700;
+            }
+            QLabel#statValue {
+                color: #111827;
+                font-size: 22px;
+                font-weight: 800;
+            }
+            QFrame#statBox {
+                background: #f4f7fb;
+                border: 1px solid #dfe7f0;
+                border-radius: 14px;
+            }
+            QLineEdit {
+                background: #ffffff;
+                border: 1px solid #cdd8e6;
+                border-radius: 12px;
+                color: #172033;
+                padding: 8px 12px;
+                selection-background-color: #1479d4;
+                selection-color: #ffffff;
+            }
+            QLineEdit:focus {
+                border: 1px solid #1479d4;
+                background: #fbfdff;
+            }
+            QCheckBox {
+                color: #34445a;
+                spacing: 8px;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 5px;
+                border: 1px solid #bbc8d8;
+                background: #ffffff;
+            }
+            QCheckBox::indicator:checked {
+                background: #24a76a;
+                border-color: #24a76a;
+            }
+            QPushButton, QToolButton {
+                border: none;
+                border-radius: 12px;
+                color: #172033;
+                font-weight: 800;
+                min-height: 42px;
+                padding: 8px 14px;
+            }
+            QPushButton#primaryButton {
+                background: #24a76a;
+                color: #ffffff;
+            }
+            QPushButton#secondaryButton {
+                background: #dc2626;
+                color: #fff5f5;
+            }
+            QPushButton#ghostButton, QToolButton {
+                background: #eef4fb;
+                color: #23344a;
+            }
+            QToolButton#themeButton {
+                border: 1px solid #d1deec;
+            }
+            QPushButton:disabled {
+                background: #e6ebf1;
+                color: #94a3b8;
+            }
+            QTextEdit {
+                background: #fbfdff;
+                border: 1px solid #d6e1ee;
+                border-radius: 14px;
+                color: #28364a;
+                font-family: "Cascadia Mono", "Consolas", monospace;
+                font-size: 12px;
+                padding: 10px;
+            }
+                """
+            )
+
+            self.chart.setBackgroundBrush(QColor("#ffffff"))
+            self.chart.setPlotAreaBackgroundBrush(QColor("#f7fafc"))
+            self.chart.setTitleBrush(QColor("#172033"))
+            self.chart.legend().setLabelColor(QColor("#34445a"))
+            axis_label_color = QColor("#52657a")
+            grid_color = QColor("#dbe5f0")
+            axis_line_color = QColor("#b9c8d8")
+        else:
+            self.setStyleSheet(
+                """
             QWidget#root {
                 background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 1,
                     stop: 0 #07111f, stop: 0.48 #0b1c30, stop: 1 #102b2c);
@@ -721,6 +918,9 @@ class SignalMonitorApp(QMainWindow):
                 background: rgba(255, 255, 255, 0.08);
                 color: #d8e6f6;
             }
+            QToolButton#themeButton {
+                border: 1px solid rgba(255, 255, 255, 0.10);
+            }
             QPushButton:disabled {
                 background: rgba(255, 255, 255, 0.07);
                 color: #75849a;
@@ -734,21 +934,25 @@ class SignalMonitorApp(QMainWindow):
                 font-size: 12px;
                 padding: 10px;
             }
-            """
-        )
+                """
+            )
 
-        self.chart.setBackgroundBrush(QColor("#0a1627"))
-        self.chart.setPlotAreaBackgroundBrush(QColor("#08111f"))
+            self.chart.setBackgroundBrush(QColor("#0a1627"))
+            self.chart.setPlotAreaBackgroundBrush(QColor("#08111f"))
+            self.chart.setTitleBrush(QColor("#e6edf7"))
+            self.chart.legend().setLabelColor(QColor("#c7d4e5"))
+            axis_label_color = QColor("#a9b7ca")
+            grid_color = QColor("#1f334d")
+            axis_line_color = QColor("#35506f")
+
         self.chart.setPlotAreaBackgroundVisible(True)
-        self.chart.setTitleBrush(QColor("#e6edf7"))
-        self.chart.legend().setLabelColor(QColor("#c7d4e5"))
         self.chart.legend().setFont(QFont("Segoe UI", 9))
 
         for axis in [self.axis_x, self.axis_y_rsrp, self.axis_y_sinr]:
-            axis.setLabelsColor(QColor("#a9b7ca"))
-            axis.setTitleBrush(QColor("#a9b7ca"))
-            axis.setGridLineColor(QColor("#1f334d"))
-            axis.setLinePenColor(QColor("#35506f"))
+            axis.setLabelsColor(axis_label_color)
+            axis.setTitleBrush(axis_label_color)
+            axis.setGridLineColor(grid_color)
+            axis.setLinePenColor(axis_line_color)
 
     def bind_signals(self):
         self.signals.data.connect(self.handle_data)
@@ -761,6 +965,19 @@ class SignalMonitorApp(QMainWindow):
         self.password_input.setEchoMode(QLineEdit.Normal if visible else QLineEdit.Password)
         self.toggle_password_button.setText("Hide" if visible else "Show")
 
+    def update_theme_button_text(self):
+        self.theme_button.blockSignals(True)
+        self.theme_button.setChecked(self.theme == "light")
+        self.theme_button.setText("Light theme" if self.theme == "light" else "Dark theme")
+        self.theme_button.blockSignals(False)
+
+    def toggle_theme(self, checked=None):
+        self.theme = "light" if self.theme_button.isChecked() else "dark"
+        self.update_theme_button_text()
+        self.apply_theme()
+        save_theme_setting(self.theme)
+        self.add_log(f"Theme switched to {self.theme}.")
+
     def save_current_settings(self):
         login_url, info_url, password, interval, headless = self.collect_settings()
         save_settings(
@@ -770,6 +987,7 @@ class SignalMonitorApp(QMainWindow):
             headless,
             password=password,
             save_password=self.save_password_checkbox.isChecked(),
+            theme=self.theme,
         )
         if self.save_password_checkbox.isChecked():
             self.add_log("Settings saved to settings.ini. The file is excluded from Git.")

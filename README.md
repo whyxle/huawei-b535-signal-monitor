@@ -13,6 +13,7 @@ It is especially useful when adjusting external router antennas: start monitorin
 
 - Real-time RSRP and SINR monitoring.
 - Modern PyQt desktop interface with metric cards, trend chart, and event log.
+- Dark and light interface themes.
 - Local configuration through `settings.ini`.
 - Safe example config in `settings.example.ini`.
 
@@ -61,6 +62,7 @@ password = your_router_password_here
 [runtime]
 refresh_seconds = 2
 headless = true
+theme = light
 ```
 
 For better privacy, you can leave the password out of `settings.ini` and set it as an environment variable before launching the app:
@@ -110,6 +112,7 @@ password = your_router_password_here
 [runtime]
 refresh_seconds = 2
 headless = true
+theme = light
 ```
 
 For better privacy, avoid saving the password in `settings.ini` and use an environment variable instead:
