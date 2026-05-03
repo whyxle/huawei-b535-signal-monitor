@@ -19,7 +19,9 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QProxyStyle,
     QSizePolicy,
+    QStyle,
     QTextEdit,
     QToolButton,
     QVBoxLayout,
@@ -40,6 +42,14 @@ DEFAULT_INTERVAL_SECONDS = 2
 MAX_HISTORY_POINTS = 120
 SUPPORTED_THEMES = {"dark", "light"}
 DEFAULT_THEME = "light"
+TOOLTIP_WAKEUP_DELAY_MS = 250
+
+
+class FastToolTipStyle(QProxyStyle):
+    def styleHint(self, hint, option=None, widget=None, returnData=None):
+        if hint == QStyle.SH_ToolTip_WakeUpDelay:
+            return TOOLTIP_WAKEUP_DELAY_MS
+        return super().styleHint(hint, option, widget, returnData)
 
 
 def load_settings():
@@ -418,19 +428,25 @@ class SignalMonitorApp(QMainWindow):
         self.headless_checkbox.setChecked(self.settings["headless"])
 
         self.save_password_checkbox = QCheckBox("Save password in local settings.ini")
-        self.save_password_checkbox.setToolTip("settings.ini is ignored by Git and will not be committed.")
+        password_tip_button = QToolButton()
+        password_tip_button.setObjectName("tipButton")
+        password_tip_button.setText("!")
+        password_tip_button.setToolTip("Keep the password in the RSRP_MODEM_PASSWORD environment variable for better privacy.")
+        password_tip_button.setToolTipDuration(8000)
+        password_tip_button.setFixedSize(28, 28)
+
+        password_options = QHBoxLayout()
+        password_options.setSpacing(8)
+        password_options.addWidget(self.save_password_checkbox)
+        password_options.addWidget(password_tip_button)
+        password_options.addStretch()
 
         layout.addWidget(self.create_field("Login page", self.login_url_input))
         layout.addWidget(self.create_field("Signal data page", self.info_url_input))
         layout.addWidget(self.create_field("Router password", password_row))
         layout.addWidget(self.create_field("Refresh interval, sec", self.interval_input))
         layout.addWidget(self.headless_checkbox)
-        layout.addWidget(self.save_password_checkbox)
-
-        hint = QLabel("Tip: keep the password in the RSRP_MODEM_PASSWORD environment variable for better privacy.")
-        hint.setObjectName("hint")
-        hint.setWordWrap(True)
-        layout.addWidget(hint)
+        layout.addLayout(password_options)
 
         controls = QHBoxLayout()
         controls.setSpacing(10)
@@ -611,7 +627,8 @@ class SignalMonitorApp(QMainWindow):
         self.axis_x.setRange(now.addSecs(-60), now)
 
     def apply_theme(self):
-        QApplication.setStyle("Fusion")
+        app = QApplication.instance()
+        app.setStyle(FastToolTipStyle("Fusion"))
         palette = QPalette()
         if self.theme == "light":
             palette.setColor(QPalette.Window, QColor("#f6f8fb"))
@@ -629,9 +646,23 @@ class SignalMonitorApp(QMainWindow):
             palette.setColor(QPalette.Button, QColor("#17243a"))
             palette.setColor(QPalette.ButtonText, QColor("#e6edf7"))
             palette.setColor(QPalette.Highlight, QColor("#2e90fa"))
-        QApplication.setPalette(palette)
+        app.setPalette(palette)
 
         if self.theme == "light":
+            app.setStyleSheet(
+                """
+                QToolTip {
+                    background: #ffffff;
+                    border: 1px solid #cfdceb;
+                    border-radius: 10px;
+                    color: #23344a;
+                    font-family: "Segoe UI", "Manrope", sans-serif;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 8px 10px;
+                }
+                """
+            )
             self.setStyleSheet(
                 """
             QWidget#root {
@@ -659,7 +690,7 @@ class SignalMonitorApp(QMainWindow):
                 font-size: 30px;
                 font-weight: 800;
             }
-            QLabel#subtitle, QLabel#hint {
+            QLabel#subtitle {
                 color: #52657a;
             }
             QLabel#statusPill {
@@ -765,6 +796,17 @@ class SignalMonitorApp(QMainWindow):
             QToolButton#themeButton {
                 border: 1px solid #d1deec;
             }
+            QToolButton#tipButton {
+                background: #eef4fb;
+                border: 1px solid #cfdceb;
+                border-radius: 14px;
+                color: #52657a;
+                font-size: 14px;
+                font-weight: 900;
+                min-height: 28px;
+                min-width: 28px;
+                padding: 0;
+            }
             QPushButton:disabled {
                 background: #e6ebf1;
                 color: #94a3b8;
@@ -789,6 +831,20 @@ class SignalMonitorApp(QMainWindow):
             grid_color = QColor("#dbe5f0")
             axis_line_color = QColor("#b9c8d8")
         else:
+            app.setStyleSheet(
+                """
+                QToolTip {
+                    background: #0d192b;
+                    border: 1px solid rgba(125, 211, 252, 0.28);
+                    border-radius: 10px;
+                    color: #d8e6f6;
+                    font-family: "Segoe UI", "Manrope", sans-serif;
+                    font-size: 12px;
+                    font-weight: 600;
+                    padding: 8px 10px;
+                }
+                """
+            )
             self.setStyleSheet(
                 """
             QWidget#root {
@@ -816,7 +872,7 @@ class SignalMonitorApp(QMainWindow):
                 font-size: 30px;
                 font-weight: 800;
             }
-            QLabel#subtitle, QLabel#hint {
+            QLabel#subtitle {
                 color: #a9b7ca;
             }
             QLabel#statusPill {
@@ -921,6 +977,17 @@ class SignalMonitorApp(QMainWindow):
             QToolButton#themeButton {
                 border: 1px solid rgba(255, 255, 255, 0.10);
             }
+            QToolButton#tipButton {
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.16);
+                border-radius: 14px;
+                color: #c7d4e5;
+                font-size: 14px;
+                font-weight: 900;
+                min-height: 28px;
+                min-width: 28px;
+                padding: 0;
+            }
             QPushButton:disabled {
                 background: rgba(255, 255, 255, 0.07);
                 color: #75849a;
@@ -990,7 +1057,7 @@ class SignalMonitorApp(QMainWindow):
             theme=self.theme,
         )
         if self.save_password_checkbox.isChecked():
-            self.add_log("Settings saved to settings.ini. The file is excluded from Git.")
+            self.add_log("Settings saved to settings.ini.")
         else:
             self.add_log("Settings saved without the password. Use the input field or RSRP_MODEM_PASSWORD for the password.")
 
