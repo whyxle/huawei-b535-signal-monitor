@@ -121,6 +121,8 @@ For better privacy, avoid saving the password in `settings.ini` and use an envir
 $env:RSRP_MODEM_PASSWORD = "your_router_password_here"
 ```
 
+In the app, the **Save password in local settings.ini** checkbox controls whether Save or Start writes the current router password to `settings.ini`. If the checkbox is unchecked, the app keeps the password only for the current session and removes it from `settings.ini` on the next save.
+
 `settings.ini` is listed in `.gitignore` and should not be committed.
 
 ## Notes

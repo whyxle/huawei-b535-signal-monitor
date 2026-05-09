@@ -58,6 +58,8 @@ def load_settings():
 
     connection = config["connection"] if config.has_section("connection") else {}
     runtime = config["runtime"] if config.has_section("runtime") else {}
+    file_password = connection.get("password", "")
+    env_password = os.getenv("RSRP_MODEM_PASSWORD")
     theme = os.getenv("RSRP_THEME", runtime.get("theme", DEFAULT_THEME)).lower()
     if theme not in SUPPORTED_THEMES:
         theme = DEFAULT_THEME
@@ -65,7 +67,9 @@ def load_settings():
     return {
         "login_url": os.getenv("RSRP_LOGIN_URL", connection.get("login_url", DEFAULT_LOGIN_URL)),
         "info_url": os.getenv("RSRP_INFO_URL", connection.get("info_url", DEFAULT_INFO_URL)),
-        "password": os.getenv("RSRP_MODEM_PASSWORD", connection.get("password", "")),
+        "password": env_password if env_password else file_password,
+        "password_saved": bool(file_password),
+        "password_source": "environment" if env_password else ("settings.ini" if file_password else ""),
         "interval": int(os.getenv("RSRP_REFRESH_SECONDS", runtime.get("refresh_seconds", DEFAULT_INTERVAL_SECONDS))),
         "headless": os.getenv("RSRP_HEADLESS", runtime.get("headless", "true")).lower() not in {"0", "false", "no"},
         "theme": theme,
@@ -328,6 +332,10 @@ class SignalMonitorApp(QMainWindow):
         self.apply_theme()
         self.bind_signals()
         self.add_log("Application is ready. Configure the connection and press Start.")
+        if self.settings["password_source"] == "settings.ini":
+            self.add_log("Router password loaded from settings.ini; password saving is enabled.")
+        elif self.settings["password_source"] == "environment":
+            self.add_log("Router password loaded from RSRP_MODEM_PASSWORD.")
 
     def build_ui(self):
         root = QWidget()
@@ -428,10 +436,19 @@ class SignalMonitorApp(QMainWindow):
         self.headless_checkbox.setChecked(self.settings["headless"])
 
         self.save_password_checkbox = QCheckBox("Save password in local settings.ini")
+        self.save_password_checkbox.setChecked(self.settings["password_saved"])
+        self.save_password_checkbox.setToolTip(
+            "When checked, Save or Start writes the current password to settings.ini. "
+            "When unchecked, the password is removed from settings.ini."
+        )
+        self.save_password_checkbox.setToolTipDuration(8000)
         password_tip_button = QToolButton()
         password_tip_button.setObjectName("tipButton")
         password_tip_button.setText("!")
-        password_tip_button.setToolTip("Keep the password in the RSRP_MODEM_PASSWORD environment variable for better privacy.")
+        password_tip_button.setToolTip(
+            "For better privacy, leave this unchecked and keep the password in the "
+            "RSRP_MODEM_PASSWORD environment variable."
+        )
         password_tip_button.setToolTipDuration(8000)
         password_tip_button.setFixedSize(28, 28)
 
@@ -1057,9 +1074,12 @@ class SignalMonitorApp(QMainWindow):
             theme=self.theme,
         )
         if self.save_password_checkbox.isChecked():
-            self.add_log("Settings saved to settings.ini.")
+            self.add_log("Settings saved to settings.ini, including the router password.")
         else:
-            self.add_log("Settings saved without the password. Use the input field or RSRP_MODEM_PASSWORD for the password.")
+            self.add_log(
+                "Settings saved without the router password. Next launch will use RSRP_MODEM_PASSWORD "
+                "or ask you to type the password again."
+            )
 
     def collect_settings(self):
         login_url = self.login_url_input.text().strip() or DEFAULT_LOGIN_URL
